@@ -11,8 +11,12 @@ int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
-    int N;
-    cin >> N;
+    int N, M;
+    cin >> N >> M;
+
+    if (M - N == 0 || M - N == 1) cout << "stressed\n";
+    else if (M < N) cout << "relaxed\n";
+    else cout << "okay\n";
 
     return 0;
 }
