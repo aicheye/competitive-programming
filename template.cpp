@@ -3,9 +3,9 @@
 #pragma GCC optimize("unroll-loops")
 
 #include <bits/stdc++.h>
-#include <iostream>
-
 using namespace std;
+
+#define ll long long
 
 int main() {
     ios_base::sync_with_stdio(false);
