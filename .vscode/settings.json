@@ -23,6 +23,7 @@
     "generator": "cpp",
     "text_encoding": "cpp",
     "compare": "cpp",
-    "ostream": "cpp"
+    "ostream": "cpp",
+    "*.tcc": "cpp"
   }
 }
