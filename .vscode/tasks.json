@@ -4,7 +4,7 @@
       "type": "cppbuild",
       "label": "C/C++: g++.exe build active file",
       "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
-      "args": ["-fdiagnostics-color=always", "-g", "${file}", "-o", "${workspaceFolder}/builds/${fileBasenameNoExtension}.exe", "-Wl,--stack,536870912", "-O2", "-Wall", "-Wextra", "-Wshadow", "-Wconversion", "-Wfloat-equal", "-Wduplicated-cond", "-Wlogical-op"],
+      "args": ["-fdiagnostics-color=always", "-g", "${file}", "-o", "${workspaceFolder}/builds/${fileBasenameNoExtension}.exe", "-Wl,--stack,262144000", "-O2", "-Wall", "-Wextra", "-Wshadow", "-Wconversion", "-Wfloat-equal", "-Wduplicated-cond", "-Wlogical-op"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
