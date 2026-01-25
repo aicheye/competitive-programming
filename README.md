@@ -10,5 +10,5 @@ Contains problems from:
 Solutions in `ayj/`, `dmoj/`, and `codeforces/` use the CPH VSCode extension.
 https://marketplace.visualstudio.com/items?itemName=DivyanshuAgrawal.competitive-programming-helper
 
-Solutions in `leetcode/` and `grind75/` use the LeetCode VSCode extension.
+Solutions in `leetcode/` use the LeetCode VSCode extension.
 https://marketplace.visualstudio.com/items?itemName=LeetCode.vscode-leetcode
