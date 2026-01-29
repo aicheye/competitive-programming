@@ -1,0 +1,186 @@
+#!/bin/bash
+
+# Usage: ./test <contest> [problem]
+# Example: ./test 2025uso bronzep1
+#          ./test 2025uso
+
+
+CONTEST=$1
+PROBLEM=$2
+
+if [ -z "$CONTEST" ]; then
+    echo "Usage: ./test <contest> [problem]"
+    exit 1
+fi
+
+BASE_DIR="$PWD"
+
+run_test() {
+    local contest=$1
+    local problem=$2
+    local problem_dir="$BASE_DIR/$contest/$problem"
+
+    if [ ! -d "$problem_dir" ]; then
+        echo "Directory $problem_dir does not exist."
+        return 1
+    fi
+
+    local source_file="$problem_dir/$contest.$problem.cpp"
+    local executable="$problem_dir/$contest.$problem"
+
+    # Check if strict naming exists, otherwise look for unique .cpp
+    if [ ! -f "$source_file" ]; then
+        # Fallback: look for exactly one .cpp file in the directory
+        local cpp_files=("$problem_dir"/*.cpp)
+        if [ ${#cpp_files[@]} -eq 1 ] && [ -f "${cpp_files[0]}" ]; then
+            source_file="${cpp_files[0]}"
+            executable="${source_file%.cpp}"
+        else
+            echo "Source file $source_file does not exist, and could not find a single unique .cpp file in $problem_dir."
+            return 1
+        fi
+    fi
+
+    local display_source="$source_file"
+    if [[ "$source_file" == *"/usaco/"* ]]; then
+        display_source="usaco/${source_file#*/usaco/}"
+    fi
+
+    echo "Compiling $display_source..."
+    g++ -O2 -std=c++17 "$source_file" -o "$executable"
+
+    if [ $? -ne 0 ]; then
+        echo "Compilation failed."
+        return 1
+    fi
+
+    local data_dir="$problem_dir/data"
+
+    if [ ! -d "$data_dir" ]; then
+        echo "Data directory $data_dir does not exist."
+        return 1
+    fi
+
+    local display_dir="$data_dir"
+    if [[ "$data_dir" == *"/usaco/"* ]]; then
+        display_dir="usaco/${data_dir#*/usaco/}"
+    fi
+
+    echo "-----------------------------------"
+    echo "Running tests from $display_dir..."
+    echo "-----------------------------------"
+
+    # Use ls -v for natural sort order (1.in, 2.in, ... 10.in)
+    for input_file in $(ls -v "$data_dir"/*.in 2>/dev/null); do
+        [ -e "$input_file" ] || continue
+        
+        local filename=$(basename "$input_file")
+        local test_name="${filename%.*}"
+        local output_file="$data_dir/$test_name.out"
+        
+        if [ ! -f "$output_file" ]; then
+            echo "Warning: No output file for $test_name"
+            continue
+        fi
+        
+        # Run user program
+        # Limit memory to 256MB (262144 KB)
+        # Use /usr/bin/time for measurement
+        ( ulimit -v 262144; /usr/bin/time -f "%e" -o "$problem_dir/temp.time" timeout 2s "$executable" < "$input_file" > "$problem_dir/temp.out" 2> "$problem_dir/temp.err" )
+        local exit_code=$?
+        
+        local duration_sec=$(cat "$problem_dir/temp.time" 2>/dev/null)
+        local duration=$(echo "$duration_sec" | awk '{printf "%.0f", $1*1000}' 2>/dev/null)
+        if [ -z "$duration" ]; then duration="0"; fi
+
+        if [ $exit_code -eq 124 ]; then
+            echo -e "\e[33m[TLE]\e[0m Test $test_name (>2000ms)"
+            rm -f "$problem_dir/temp.out" "$problem_dir/temp.err" "$problem_dir/temp.time" "$executable"
+            return 1
+        fi
+
+        if [ $exit_code -ne 0 ]; then
+            # Check for bad_alloc in stderr to confirm MLE
+            if grep -q "std::bad_alloc" "$problem_dir/temp.err"; then
+                 echo -e "\e[31m[MLE]\e[0m Test $test_name (Memory Limit Exceeded)"
+            elif [ $exit_code -eq 139 ]; then
+                 echo -e "\e[31m[RTE]\e[0m Test $test_name (Segmentation Fault)"
+            else
+                 echo -e "\e[31m[RTE]\e[0m Test $test_name (Exit Code: $exit_code)"
+            fi
+            
+            # Print stderr if it's not empty (useful for debugging RTE)
+            if [ -s "$problem_dir/temp.err" ]; then
+                echo "Error Output:"
+                head -n 5 "$problem_dir/temp.err"
+                echo "----------------"
+            fi
+            
+            rm -f "$problem_dir/temp.out" "$problem_dir/temp.err" "$problem_dir/temp.time" "$executable"
+            return 1
+        fi
+        
+        # Check diff
+        if diff -w -B "$problem_dir/temp.out" "$output_file" > /dev/null; then
+            echo -e "\e[32m[PASSED]\e[0m Test $test_name (${duration}ms)"
+        else
+            echo -e "\e[31m[FAILED]\e[0m Test $test_name (${duration}ms)"
+            
+            diff_out=$(diff -w -B "$problem_dir/temp.out" "$output_file" | head -n 1)
+            line_actual=1
+            line_expected=1
+            
+            # Parse diff output (matches format like 3c3, 2d1, 4a5 or ranges like 3,4c5)
+            if [[ "$diff_out" =~ ^([0-9,]+)([acd])([0-9,]+)$ ]]; then
+                 line_actual=$(echo "$diff_out" | sed -E 's/([0-9]+).*/\1/')
+                 line_expected=$(echo "$diff_out" | sed -E 's/.*[acd]([0-9]+).*/\1/')
+            fi
+
+            echo "Expected Output (from line $line_expected):"
+            tail -n "+$line_expected" "$output_file" | head -n 5
+            echo "----------------"
+            echo "Actual Output (from line $line_actual):"
+            tail -n "+$line_actual" "$problem_dir/temp.out" | head -n 5
+            echo "----------------"
+            
+            # Stop after first failure
+            rm -f "$problem_dir/temp.out" "$problem_dir/temp.err" "$problem_dir/temp.time" "$executable"
+            return 1
+        fi
+    done
+
+    # Cleanup
+    rm -f "$problem_dir/temp.out" "$problem_dir/temp.err" "$problem_dir/temp.time" "$executable"
+}
+
+if [ -n "$PROBLEM" ]; then
+    run_test "$CONTEST" "$PROBLEM"
+    exit $?
+else
+    # Run all problems in the contest
+    CONTEST_DIR="$BASE_DIR/$CONTEST"
+    if [ ! -d "$CONTEST_DIR" ]; then
+         echo "Contest directory $CONTEST_DIR does not exist."
+         exit 1
+    fi
+    
+    echo "Running all tests for contest $CONTEST..."
+    
+    found=false
+    for d in "$CONTEST_DIR"/*; do
+        if [ -d "$d" ]; then
+            problem_name=$(basename "$d")
+            echo ""
+            echo "=========================================="
+            echo "Test Problem: $problem_name"
+            echo "=========================================="
+            run_test "$CONTEST" "$problem_name"
+            found=true
+        fi
+    done
+    
+    if [ "$found" = false ]; then
+        echo "No problems found in $CONTEST_DIR"
+    fi
+fi
+
