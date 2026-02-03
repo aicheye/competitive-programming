@@ -4,9 +4,9 @@
  * [3] Longest Substring Without Repeating Characters
  */
 
+#include <algorithm>
+#include <array>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 using namespace std;
 
@@ -14,44 +14,21 @@ using namespace std;
 class Solution {
 public:
   int lengthOfLongestSubstring(string s) {
-    const int n = s.size();
+    int lastIndex[256];
+    for (int i = 0; i < 256; i++) {
+      lastIndex[i] = -1;
+    }
+
+    int left = 0;
     int res = 0;
 
-    // seen[i][j][c] represents whether c is in s.substr(j, i)
-    vector<vector<unordered_map<char, bool>>> seen =
-        vector<vector<unordered_map<char, bool>>>(
-            n + 1, vector<unordered_map<char, bool>>(n + 1));
-
-    // valid[i][j] represents whether s.substr(j, i) is valid
-    vector<vector<bool>> valid =
-        vector<vector<bool>>(n + 1, vector<bool>(n + 1));
-
-    for (int len = 1; len <= n; len++) {
-      for (int i = 0; i <= n - len; i++) {
-        if (len == 1) {
-          seen[len][i][s.at(i)] = true;
-          valid[len][i] = true;
-          res = len;
-          continue;
-        }
-
-        const char c1 = s.at(i);
-        const char c2 = s.at(i + len - 1);
-
-        if ((len - 2 > 1 && !valid[len - 2][i + 1]) || c1 == c2 ||
-            seen[len - 2][i + 1][c1] || seen[len - 2][i + 1][c2]) {
-          valid[len][i] = false;
-          continue;
-        }
-
-        cout << c1 << " " << c2 << " " << len << " " << i << endl;
-
-        seen[len][i] = seen[len - 2][i + 1];
-        seen[len][i][c1] = true;
-        seen[len][i][c2] = true;
-        valid[len][i] = true;
-        res = len;
+    for (int right = 0; right < s.size(); ++right) {
+      unsigned char c = s[right];
+      if (lastIndex[c] >= left) {
+        left = lastIndex[c] + 1;
       }
+      lastIndex[c] = right;
+      res = max(res, right - left + 1);
     }
 
     return res;
