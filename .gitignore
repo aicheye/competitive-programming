@@ -3,3 +3,8 @@ builds/
 .venv/
 .vscode/
 data/
+
+
+# Added by cargo
+
+/target
