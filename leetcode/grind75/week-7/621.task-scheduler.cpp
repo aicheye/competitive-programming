@@ -4,6 +4,7 @@
  * [621] Task Scheduler
  */
 
+#include <algorithm>
 #include <vector>
 
 using namespace std;
@@ -18,8 +19,15 @@ public:
       freq[task - 'A']++;
     }
 
-    int hi = 0;
-    int gap = 2;
+    sort(begin(freq), end(freq));
+
+    int gap = (freq[25] - 1) * n;
+
+    for (int i = 0; i < 25; i++) {
+      gap -= min(freq[25] - 1, freq[i]);
+    }
+
+    return gap < 0 ? tasks.size() : tasks.size() + gap;
   }
 };
 // @lc code=end
